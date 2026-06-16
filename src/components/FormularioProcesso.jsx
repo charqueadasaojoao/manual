@@ -7,6 +7,7 @@ const FORM_VAZIO = {
   titulo: "",
   resumo: "",
   local_armazenamento: "",
+  fluxograma_imagem_url: "",
   responsaveisTexto: "",
   camposTexto: "",
   passos: [{ responsavel: "", acao: "" }],
@@ -20,6 +21,7 @@ function processoParaForm(p) {
     titulo: p.titulo || "",
     resumo: p.resumo || "",
     local_armazenamento: p.local_armazenamento || "",
+    fluxograma_imagem_url: p.fluxograma_imagem_url || "",
     responsaveisTexto: (p.responsaveis || []).join(", "),
     camposTexto: (p.campos || []).join(", "),
     passos: p.passos && p.passos.length ? p.passos : [{ responsavel: "", acao: "" }],
@@ -57,6 +59,7 @@ export default function FormularioProcesso({
       titulo: form.titulo.trim(),
       resumo: form.resumo.trim(),
       local_armazenamento: form.local_armazenamento.trim(),
+      fluxograma_imagem_url: form.fluxograma_imagem_url.trim(),
       responsaveis: form.responsaveisTexto.split(",").map((s) => s.trim()).filter(Boolean),
       campos: form.camposTexto.split(",").map((s) => s.trim()).filter(Boolean),
       passos: form.passos.filter((p) => p.responsavel.trim() || p.acao.trim()),
@@ -152,6 +155,13 @@ export default function FormularioProcesso({
           placeholder="Cole aqui o link do Drive ou o caminho da pasta"
           value={form.local_armazenamento}
           onChange={(v) => campo("local_armazenamento", v)}
+        />
+
+        <CampoTexto
+          label="Fluxograma visual (link da imagem do Drive ou Lucidchart)"
+          placeholder="Cole aqui a URL da imagem do fluxograma"
+          value={form.fluxograma_imagem_url}
+          onChange={(v) => campo("fluxograma_imagem_url", v)}
         />
 
         <CampoTexto

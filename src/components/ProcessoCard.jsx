@@ -2,6 +2,10 @@ export default function ProcessoCard({ processo, departamento, ancoraId }) {
   const p = processo;
   const localArmazenamento = p.local_armazenamento || "";
   const localEhLink = /^https?:\/\//i.test(localArmazenamento);
+  const fluxogramaOriginal = p.fluxograma_imagem_url || "";
+  const fluxogramaUrl = normalizarUrlFluxograma(fluxogramaOriginal);
+  const fluxogramaEhPdfOuDrive = fluxogramaUrl && (ehPdf(fluxogramaUrl) || ehLinkDrive(fluxogramaOriginal));
+  const temFluxograma = Boolean(fluxogramaUrl);
 
   return (
     <article id={ancoraId} className="max-w-[920px]">
@@ -20,6 +24,34 @@ export default function ProcessoCard({ processo, departamento, ancoraId }) {
         <p className="text-[1.05rem] text-marinho-suave border-l-[3px] border-kraft pl-4 mb-7">
           {p.resumo}
         </p>
+      )}
+
+      {temFluxograma && (
+        <section className="mb-8">
+          <h2 className="font-display text-lg font-semibold mb-3.5 pb-2 border-b-2 border-kraft-claro">
+            Fluxograma visual
+          </h2>
+          {fluxogramaEhPdfOuDrive ? (
+            <iframe
+              src={fluxogramaUrl}
+              title={`Fluxograma do processo ${p.codigo}`}
+              className="w-full h-[78vh] min-h-[520px] rounded border border-kraft-claro bg-white shadow-sm"
+            />
+          ) : (
+            <a href={fluxogramaUrl} target="_blank" rel="noreferrer" className="block">
+              <img
+                src={fluxogramaUrl}
+                alt={`Fluxograma do processo ${p.codigo}`}
+                className="w-full max-w-full rounded border border-kraft-claro bg-white shadow-sm"
+              />
+            </a>
+          )}
+          <p className="mt-2 text-xs text-marinho-suave">
+            {fluxogramaEhPdfOuDrive
+              ? "Se o preview do Drive não carregar, abra o link original em uma nova aba."
+              : "Clique na imagem para abrir em tamanho original."}
+          </p>
+        </section>
       )}
 
       {(p.local_armazenamento || (p.responsaveis && p.responsaveis.length > 0)) && (
@@ -102,4 +134,29 @@ export default function ProcessoCard({ processo, departamento, ancoraId }) {
       )}
     </article>
   );
+}
+
+function normalizarUrlFluxograma(url) {
+  if (!url) return "";
+
+  const trimmed = url.trim();
+  const driveMatch = trimmed.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/i);
+
+  if (driveMatch) {
+    if (trimmed.toLowerCase().includes("/preview")) {
+      return trimmed;
+    }
+
+    return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+  }
+
+  return trimmed;
+}
+
+function ehLinkDrive(url) {
+  return /drive\.google\.com/i.test(url || "");
+}
+
+function ehPdf(url) {
+  return /\.pdf($|[?#])/i.test(url || "");
 }
