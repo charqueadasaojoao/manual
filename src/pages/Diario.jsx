@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 
-const STORAGE_KEY = "manual-diario-v1";
 const HOJE = new Date().toISOString().slice(0, 10);
 const EMPREGADOS_PADRAO = ["Eva", "João", "Pedro", "Marcelo", "Contador"];
 
@@ -37,25 +37,95 @@ function normalizarEstado(salvo) {
   return estado;
 }
 
-function carregarEstado() {
-  if (typeof window === "undefined") return estadoInicial();
+function estadoDbParaEstado(appRow) {
+  if (!appRow) return estadoInicial();
 
-  try {
-    const salvo = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null");
-    return normalizarEstado(salvo);
-  } catch {
-    return estadoInicial();
-  }
+  return normalizarEstado({
+    empregados: appRow.empregados,
+    selecionado: appRow.selecionado,
+    porFuncionario: appRow.por_funcionario,
+  });
+}
+
+function estadoParaDb(estado) {
+  return {
+    dia: HOJE,
+    empregados: estado.empregados,
+    selecionado: estado.selecionado,
+    por_funcionario: estado.porFuncionario,
+  };
 }
 
 export default function Diario() {
-  const [estado, setEstado] = useState(() => carregarEstado());
+  const [estado, setEstado] = useState(() => estadoInicial());
   const [novaTarefa, setNovaTarefa] = useState("");
   const [novoEmpregado, setNovoEmpregado] = useState("");
+  const [carregando, setCarregando] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState(null);
+  const carregouInicialmente = useRef(false);
+  const estadoAnterior = useRef(null);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(estado));
-  }, [estado]);
+    let ativo = true;
+
+    async function carregar() {
+      setCarregando(true);
+      setErro(null);
+
+      const { data, error } = await supabase.from("rotina_diaria").select("*").eq("dia", HOJE).maybeSingle();
+
+      if (!ativo) return;
+
+      if (error) {
+        setErro("Erro ao carregar a rotina diária: " + error.message);
+        setCarregando(false);
+        return;
+      }
+
+      setEstado(estadoDbParaEstado(data));
+      setCarregando(false);
+      carregouInicialmente.current = true;
+    }
+
+    carregar();
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (carregando || !carregouInicialmente.current) return;
+
+    const estadoSerializado = JSON.stringify(estado);
+    if (estadoSerializado === estadoAnterior.current) return;
+
+    estadoAnterior.current = estadoSerializado;
+
+    let ativo = true;
+
+    async function salvar() {
+      setSalvando(true);
+      setErro(null);
+
+      const { error } = await supabase.from("rotina_diaria").upsert(estadoParaDb(estado), { onConflict: "dia" });
+
+      if (!ativo) return;
+
+      if (error) {
+        setErro("Erro ao salvar a rotina diária: " + error.message);
+      }
+
+      setSalvando(false);
+    }
+
+    salvar();
+
+    return () => {
+      ativo = false;
+    };
+  }, [estado, carregando]);
 
   const funcionarioAtual = estado.selecionado;
   const tarefas = useMemo(() => estado.porFuncionario[funcionarioAtual]?.tarefas || [], [estado, funcionarioAtual]);
@@ -149,6 +219,24 @@ export default function Diario() {
             ← Voltar ao manual
           </Link>
         </div>
+
+        {carregando && (
+          <div className="bg-white border border-kraft-claro rounded-2xl shadow-sm p-4 mb-5 text-sm text-marinho-suave">
+            Carregando rotina diária...
+          </div>
+        )}
+
+        {erro && (
+          <div className="bg-[#fdeae4] border-l-[3px] border-dourado rounded px-4 py-3 mb-5 text-sm text-[#7a2c17]">
+            {erro}
+          </div>
+        )}
+
+        {!carregando && (
+          <div className="text-xs text-marinho-suave mb-4">
+            {salvando ? "Salvando no Supabase..." : "Salvo no Supabase."}
+          </div>
+        )}
 
         <div className="bg-white border border-kraft-claro rounded-2xl shadow-sm p-5 md:p-6 mb-5">
           <div className="grid gap-4 md:grid-cols-[1.3fr_1fr_auto] items-end">

@@ -40,6 +40,28 @@ alter table if exists processos
 alter table if exists processos
   add column if not exists planilhas_google_urls text;
 
+-- ---------- TABELA: rotina_diaria ----------
+create table if not exists rotina_diaria (
+  dia date primary key,
+  empregados text[] default '{}',
+  selecionado text,
+  por_funcionario jsonb default '{}'::jsonb,
+  atualizado_em timestamptz default now()
+);
+
+create or replace function atualizar_timestamp_rotina_diaria()
+returns trigger as $$
+begin
+  new.atualizado_em = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_rotina_diaria_atualizado on rotina_diaria;
+create trigger trg_rotina_diaria_atualizado
+  before update on rotina_diaria
+  for each row execute function atualizar_timestamp_rotina_diaria();
+
 -- mantém atualizado_em sempre fresco
 create or replace function atualizar_timestamp()
 returns trigger as $$
@@ -62,12 +84,17 @@ create trigger trg_processos_atualizado
 
 alter table departamentos enable row level security;
 alter table processos enable row level security;
+alter table rotina_diaria enable row level security;
 
 -- limpa políticas antigas (caso rode o script de novo)
 drop policy if exists "autenticados podem ler departamentos" on departamentos;
 drop policy if exists "autenticados podem alterar departamentos" on departamentos;
 drop policy if exists "autenticados podem ler processos" on processos;
 drop policy if exists "autenticados podem alterar processos" on processos;
+drop policy if exists "autenticados podem ler rotina diaria" on rotina_diaria;
+drop policy if exists "autenticados podem alterar rotina diaria" on rotina_diaria;
+drop policy if exists "autenticados podem inserir rotina diaria" on rotina_diaria;
+drop policy if exists "autenticados podem atualizar rotina diaria" on rotina_diaria;
 
 -- DEPARTAMENTOS: qualquer usuário logado pode ler e gerenciar
 create policy "autenticados podem ler departamentos"
@@ -89,6 +116,23 @@ create policy "autenticados podem ler processos"
 
 create policy "autenticados podem alterar processos"
   on processos for all
+  to authenticated
+  using (true)
+  with check (true);
+
+create policy "autenticados podem ler rotina diaria"
+  on rotina_diaria for select
+  to authenticated
+  using (true);
+
+create policy "autenticados podem inserir rotina diaria"
+  on rotina_diaria for insert
+  to authenticated
+  using (true)
+  with check (true);
+
+create policy "autenticados podem atualizar rotina diaria"
+  on rotina_diaria for update
   to authenticated
   using (true)
   with check (true);
