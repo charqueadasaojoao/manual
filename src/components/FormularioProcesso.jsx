@@ -8,6 +8,7 @@ const FORM_VAZIO = {
   resumo: "",
   local_armazenamento: "",
   fluxograma_imagem_url: "",
+  planilhas_google_urls: "",
   responsaveisTexto: "",
   camposTexto: "",
   passos: [{ responsavel: "", acao: "" }],
@@ -22,6 +23,7 @@ function processoParaForm(p) {
     resumo: p.resumo || "",
     local_armazenamento: p.local_armazenamento || "",
     fluxograma_imagem_url: p.fluxograma_imagem_url || "",
+    planilhas_google_urls: p.planilhas_google_urls || "",
     responsaveisTexto: (p.responsaveis || []).join(", "),
     camposTexto: (p.campos || []).join(", "),
     passos: p.passos && p.passos.length ? p.passos : [{ responsavel: "", acao: "" }],
@@ -60,6 +62,7 @@ export default function FormularioProcesso({
       resumo: form.resumo.trim(),
       local_armazenamento: form.local_armazenamento.trim(),
       fluxograma_imagem_url: form.fluxograma_imagem_url.trim(),
+      planilhas_google_urls: form.planilhas_google_urls.trim(),
       responsaveis: form.responsaveisTexto.split(",").map((s) => s.trim()).filter(Boolean),
       campos: form.camposTexto.split(",").map((s) => s.trim()).filter(Boolean),
       passos: form.passos.filter((p) => p.responsavel.trim() || p.acao.trim()),
@@ -162,6 +165,13 @@ export default function FormularioProcesso({
           placeholder="Cole aqui a URL da imagem do fluxograma"
           value={form.fluxograma_imagem_url}
           onChange={(v) => campo("fluxograma_imagem_url", v)}
+        />
+
+        <CampoArea
+          label="Tabelas do Google Sheets (uma URL por linha)"
+          value={form.planilhas_google_urls}
+          onChange={(v) => campo("planilhas_google_urls", v)}
+          rows={3}
         />
 
         <CampoTexto

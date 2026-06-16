@@ -3,6 +3,7 @@ export default function ProcessoCard({ processo, departamento, ancoraId }) {
   const localArmazenamento = p.local_armazenamento || "";
   const localEhLink = /^https?:\/\//i.test(localArmazenamento);
   const fluxogramaOriginal = p.fluxograma_imagem_url || "";
+  const planilhasUrls = normalizarPlanilhasGoogleSheets(p.planilhas_google_urls || "");
   const fluxogramaUrl = normalizarUrlFluxograma(fluxogramaOriginal);
   const fluxogramaEhPdfOuDrive = fluxogramaUrl && (ehPdf(fluxogramaUrl) || ehLinkDrive(fluxogramaOriginal));
   const temFluxograma = Boolean(fluxogramaUrl);
@@ -51,6 +52,38 @@ export default function ProcessoCard({ processo, departamento, ancoraId }) {
               ? "Se o preview do Drive não carregar, abra o link original em uma nova aba."
               : "Clique na imagem para abrir em tamanho original."}
           </p>
+        </section>
+      )}
+
+      {planilhasUrls.length > 0 && (
+        <section className="mb-8">
+          <h2 className="font-display text-lg font-semibold mb-3.5 pb-2 border-b-2 border-kraft-claro">
+            Tabelas do Google Sheets
+          </h2>
+          <div className="space-y-6">
+            {planilhasUrls.map((url, index) => (
+              <div key={`${url}-${index}`} className="space-y-2">
+                <iframe
+                  src={url}
+                  title={`Tabela do Google Sheets ${index + 1} do processo ${p.codigo}`}
+                  className="w-full h-[72vh] min-h-[460px] rounded border border-kraft-claro bg-white shadow-sm"
+                />
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <p className="text-xs text-marinho-suave">
+                    Se a tabela não carregar, abra o link em uma nova aba.
+                  </p>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-dourado hover:opacity-80"
+                  >
+                    Abrir tabela
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
@@ -159,4 +192,30 @@ function ehLinkDrive(url) {
 
 function ehPdf(url) {
   return /\.pdf($|[?#])/i.test(url || "");
+}
+
+function normalizarPlanilhasGoogleSheets(valor) {
+  return valor
+    .split(/\r?\n/)
+    .map((linha) => linha.trim())
+    .filter(Boolean)
+    .map((linha) => normalizarUrlSheets(linha));
+}
+
+function normalizarUrlSheets(url) {
+  if (!url) return "";
+
+  const trimmed = url.trim();
+  const match = trimmed.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/i);
+  if (!match) return trimmed;
+
+  const sheetId = match[1];
+  const gidMatch = trimmed.match(/[?#&]gid=(\d+)/i);
+  const gid = gidMatch ? gidMatch[1] : "0";
+
+  if (/\/preview/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/preview?gid=${gid}`;
 }

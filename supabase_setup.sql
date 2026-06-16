@@ -24,6 +24,7 @@ create table if not exists processos (
   resumo text,
   local_armazenamento text,
   fluxograma_imagem_url text,
+  planilhas_google_urls text,
   responsaveis text[] default '{}',        -- ex: {"Eva","João","Pedro"}
   campos text[] default '{}',              -- campos da planilha
   passos jsonb default '[]',                -- [{ "responsavel": "...", "acao": "..." }]
@@ -35,6 +36,9 @@ create table if not exists processos (
 
 alter table if exists processos
   add column if not exists fluxograma_imagem_url text;
+
+alter table if exists processos
+  add column if not exists planilhas_google_urls text;
 
 -- mantém atualizado_em sempre fresco
 create or replace function atualizar_timestamp()
