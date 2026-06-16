@@ -52,7 +52,6 @@ export default function Diario() {
   const [estado, setEstado] = useState(() => carregarEstado());
   const [novaTarefa, setNovaTarefa] = useState("");
   const [novoEmpregado, setNovoEmpregado] = useState("");
-  const [planilhaUrl, setPlanilhaUrl] = useState("");
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(estado));
@@ -231,51 +230,6 @@ export default function Diario() {
           </div>
         </div>
 
-        <div className="bg-white border border-kraft-claro rounded-2xl shadow-sm p-5 md:p-6 mb-5">
-          <label className="block font-corpo text-xs uppercase tracking-wider text-marinho-suave mb-1.5">
-            Visualizar planilha do Google Sheets
-          </label>
-          <div className="flex flex-col md:flex-row gap-3">
-            <input
-              type="text"
-              value={planilhaUrl}
-              onChange={(e) => setPlanilhaUrl(e.target.value)}
-              placeholder="Cole a URL da planilha do Google Sheets"
-              className="flex-1 px-3.5 py-3 border border-kraft rounded text-sm bg-white focus:border-dourado focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => setPlanilhaUrl(normalizarUrlSheets(planilhaUrl))}
-              className="bg-marinho text-white font-corpo font-semibold text-sm px-5 py-3 rounded hover:opacity-90"
-            >
-              Exibir planilha
-            </button>
-          </div>
-
-          {planilhaUrl.trim() && (
-            <div className="mt-4">
-              <iframe
-                src={normalizarUrlSheets(planilhaUrl)}
-                title="Visualização da planilha do Google Sheets"
-                className="w-full h-[78vh] min-h-[520px] rounded border border-kraft-claro bg-white shadow-sm"
-              />
-              <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
-                <p className="text-xs text-marinho-suave">
-                  A visualização depende do compartilhamento da planilha no Google.
-                </p>
-                <a
-                  href={normalizarUrlSheets(planilhaUrl)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-dourado hover:opacity-80"
-                >
-                  Abrir em nova aba
-                </a>
-              </div>
-            </div>
-          )}
-        </div>
-
         <div className="space-y-3">
           {tarefas.length === 0 ? (
             <div className="bg-papel-sel border border-kraft-claro rounded-2xl p-6 text-marinho-suave">
@@ -325,18 +279,4 @@ export default function Diario() {
       </div>
     </div>
   );
-}
-
-function normalizarUrlSheets(url) {
-  if (!url) return "";
-
-  const trimmed = url.trim();
-  const match = trimmed.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/i);
-  if (!match) return trimmed;
-
-  const sheetId = match[1];
-  const gidMatch = trimmed.match(/[?#&]gid=(\d+)/i);
-  const gid = gidMatch ? gidMatch[1] : "0";
-
-  return `https://docs.google.com/spreadsheets/d/${sheetId}/pubhtml?gid=${gid}&single=true&widget=true&headers=false`;
 }
