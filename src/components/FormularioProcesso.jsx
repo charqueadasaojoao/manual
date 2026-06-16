@@ -148,7 +148,8 @@ export default function FormularioProcesso({
         <CampoArea label="Resumo (uma frase)" value={form.resumo} onChange={(v) => campo("resumo", v)} rows={2} />
 
         <CampoTexto
-          label="Local de armazenamento (pasta, drive, sistema)"
+          label="Local de armazenamento (pasta, sistema ou link do Drive)"
+          placeholder="Cole aqui o link do Drive ou o caminho da pasta"
           value={form.local_armazenamento}
           onChange={(v) => campo("local_armazenamento", v)}
         />

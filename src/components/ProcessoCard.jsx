@@ -1,5 +1,7 @@
 export default function ProcessoCard({ processo, departamento, ancoraId }) {
   const p = processo;
+  const localArmazenamento = p.local_armazenamento || "";
+  const localEhLink = /^https?:\/\//i.test(localArmazenamento);
 
   return (
     <article id={ancoraId} className="max-w-[920px]">
@@ -27,7 +29,18 @@ export default function ProcessoCard({ processo, departamento, ancoraId }) {
               <strong className="block font-corpo text-[0.68rem] uppercase tracking-wider text-dourado mb-1">
                 Local de armazenamento
               </strong>
-              <code className="text-sm break-all">{p.local_armazenamento}</code>
+              {localEhLink ? (
+                <a
+                  href={localArmazenamento}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm break-all text-marinho underline decoration-dourado underline-offset-2 hover:opacity-80"
+                >
+                  {localArmazenamento}
+                </a>
+              ) : (
+                <code className="text-sm break-all">{localArmazenamento}</code>
+              )}
             </div>
           )}
           {p.responsaveis && p.responsaveis.length > 0 && (
