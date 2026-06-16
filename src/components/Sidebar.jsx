@@ -118,6 +118,12 @@ export default function Sidebar({ departamentos, processos }) {
 
       <div className="px-5 py-4 border-t border-white/10">
         <Link
+          to="/diario"
+          className="block w-full text-center bg-dourado text-marinho font-corpo font-semibold text-sm py-3 rounded mb-2.5 hover:opacity-90"
+        >
+          🗓️ Passo a passo diário
+        </Link>
+        <Link
           to="/admin"
           className="block w-full text-center bg-pasto text-papel font-corpo font-semibold text-sm py-3 rounded mb-2.5 hover:opacity-90"
         >

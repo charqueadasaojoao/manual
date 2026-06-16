@@ -4,6 +4,7 @@ import RotaProtegida from "./components/RotaProtegida";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
+import Diario from "./pages/Diario";
 import Impressao from "./pages/Impressao";
 
 export default function App() {
@@ -36,6 +37,15 @@ export default function App() {
             element={
               <RotaProtegida>
                 <Admin />
+              </RotaProtegida>
+            }
+          />
+
+          <Route
+            path="/diario"
+            element={
+              <RotaProtegida>
+                <Diario />
               </RotaProtegida>
             }
           />
