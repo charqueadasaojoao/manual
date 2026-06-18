@@ -30,7 +30,11 @@ function normalizarEstado(salvo) {
     const tarefas = Array.isArray(registro.tarefas) ? registro.tarefas : [];
     estado.porFuncionario[nome] = {
       atualizadoEm: registro.atualizadoEm === HOJE ? HOJE : HOJE,
-      tarefas: registro.atualizadoEm === HOJE ? tarefas : tarefas.map((t) => ({ ...t, concluida: false })),
+      tarefas: tarefas.map((t) => ({
+        ...t,
+        tipo: t.tipo === "lembrete" ? "lembrete" : "tarefa",
+        concluida: registro.atualizadoEm === HOJE ? !!t.concluida : false,
+      })),
     };
   }
 
@@ -59,10 +63,13 @@ function estadoParaDb(estado) {
 export default function Diario() {
   const [estado, setEstado] = useState(() => estadoInicial());
   const [novaTarefa, setNovaTarefa] = useState("");
+  const [novoTipo, setNovoTipo] = useState("tarefa");
   const [novoEmpregado, setNovoEmpregado] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState(null);
+  const [arrastandoId, setArrastandoId] = useState(null);
+  const [alvoSolturaId, setAlvoSolturaId] = useState(null);
   const carregouInicialmente = useRef(false);
   const estadoAnterior = useRef(null);
 
@@ -154,9 +161,10 @@ export default function Diario() {
 
     salvarFuncionario(funcionarioAtual, (atualizado) => ({
       ...atualizado,
-      tarefas: [...atualizado.tarefas, { id: novoId(), texto, concluida: false }],
+      tarefas: [...atualizado.tarefas, { id: novoId(), texto, tipo: novoTipo, concluida: false }],
     }));
     setNovaTarefa("");
+    setNovoTipo("tarefa");
   }
 
   function alternarTarefa(id) {
@@ -178,6 +186,35 @@ export default function Diario() {
       ...atualizado,
       tarefas: atualizado.tarefas.filter((t) => t.id !== id),
     }));
+  }
+
+  function moverTarefa(origemId, destinoId) {
+    if (!origemId || !destinoId || origemId === destinoId) return;
+
+    salvarFuncionario(funcionarioAtual, (atualizado) => {
+      const origem = atualizado.tarefas.findIndex((t) => t.id === origemId);
+      const destino = atualizado.tarefas.findIndex((t) => t.id === destinoId);
+
+      if (origem < 0 || destino < 0) return atualizado;
+
+      const novasTarefas = [...atualizado.tarefas];
+      const [item] = novasTarefas.splice(origem, 1);
+      novasTarefas.splice(destino, 0, item);
+
+      return {
+        ...atualizado,
+        tarefas: novasTarefas,
+      };
+    });
+  }
+
+  function iniciarArraste(id) {
+    setArrastandoId(id);
+  }
+
+  function encerrarArraste() {
+    setArrastandoId(null);
+    setAlvoSolturaId(null);
   }
 
   function selecionarFuncionario(nome) {
@@ -294,7 +331,7 @@ export default function Diario() {
         </div>
 
         <div className="bg-white border border-kraft-claro rounded-2xl shadow-sm p-5 md:p-6 mb-5">
-          <div className="flex flex-col md:flex-row gap-3">
+          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-end">
             <input
               type="text"
               value={novaTarefa}
@@ -308,6 +345,19 @@ export default function Diario() {
               placeholder="Digite uma tarefa do dia e pressione Enter"
               className="flex-1 px-3.5 py-3 border border-kraft rounded text-sm bg-white focus:border-dourado focus:outline-none"
             />
+            <div className="md:w-[180px]">
+              <label className="block font-corpo text-xs uppercase tracking-wider text-marinho-suave mb-1.5">
+                Tipo
+              </label>
+              <select
+                value={novoTipo}
+                onChange={(e) => setNovoTipo(e.target.value)}
+                className="w-full px-3.5 py-3 border border-kraft rounded text-sm bg-white focus:border-dourado focus:outline-none"
+              >
+                <option value="tarefa">Tarefa</option>
+                <option value="lembrete">Lembrete</option>
+              </select>
+            </div>
             <button
               type="button"
               onClick={adicionarTarefa}
@@ -324,31 +374,70 @@ export default function Diario() {
               Nenhuma tarefa cadastrada para este funcionário.
             </div>
           ) : (
-            tarefas.map((tarefa, indice) => (
+            tarefas.map((tarefa) => (
               <div
                 key={tarefa.id}
+                draggable
+                onDragStart={() => iniciarArraste(tarefa.id)}
+                onDragEnd={encerrarArraste}
+                onDragEnter={() => arrastandoId && arrastandoId !== tarefa.id && setAlvoSolturaId(tarefa.id)}
+                onDragLeave={() => {
+                  if (alvoSolturaId === tarefa.id) setAlvoSolturaId(null);
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => {
+                  moverTarefa(arrastandoId, tarefa.id);
+                  encerrarArraste();
+                }}
                 className={`bg-white border rounded-2xl px-4 py-4 shadow-sm flex items-start gap-4 ${
-                  tarefa.concluida ? "border-pasto/40 opacity-80" : "border-kraft-claro"
+                  tarefa.tipo === "lembrete"
+                    ? "border-[#e7b6b6] bg-[#fdecec]"
+                    : tarefa.concluida
+                      ? "border-pasto/40 opacity-80"
+                      : "border-kraft-claro"
+                } ${
+                  arrastandoId === tarefa.id
+                    ? "scale-[1.02] -rotate-1 shadow-xl ring-2 ring-dourado/40 opacity-70"
+                    : "transition-all duration-200 ease-out"
+                } ${
+                  alvoSolturaId === tarefa.id && arrastandoId !== tarefa.id
+                    ? "translate-y-[-2px] shadow-md ring-2 ring-dourado/30 animate-pulse"
+                    : ""
                 }`}
+                style={{ cursor: arrastandoId === tarefa.id ? "grabbing" : "grab", transition: "transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease" }}
               >
                 <input
                   type="checkbox"
                   checked={tarefa.concluida}
                   onChange={() => alternarTarefa(tarefa.id)}
-                  className="mt-1 h-5 w-5 accent-[color:var(--pasto)]"
+                  className={`mt-1 h-5 w-5 ${tarefa.tipo === "lembrete" ? "accent-[#c96a6a]" : "accent-[color:var(--pasto)]"}`}
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-corpo text-[0.7rem] uppercase tracking-wider text-dourado">
-                      Tarefa {indice + 1}
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span
+                      className={`font-corpo text-[0.65rem] uppercase tracking-wider px-2 py-0.5 rounded ${
+                        tarefa.tipo === "lembrete"
+                          ? "text-[#7a2c17] bg-[#f8dcdc]"
+                          : "text-marinho-suave bg-pasto/10"
+                      }`}
+                    >
+                      {tarefa.tipo === "lembrete" ? "Lembrete" : "Tarefa"}
                     </span>
-                    {tarefa.concluida && (
+                    {tarefa.concluida && tarefa.tipo !== "lembrete" && (
                       <span className="font-corpo text-[0.65rem] uppercase tracking-wider text-pasto bg-pasto/10 px-2 py-0.5 rounded">
                         Concluída
                       </span>
                     )}
                   </div>
-                  <p className={`m-0 text-[0.98rem] ${tarefa.concluida ? "line-through text-marinho-suave" : "text-marinho"}`}>
+                  <p
+                    className={`m-0 text-[0.98rem] ${
+                      tarefa.tipo === "lembrete"
+                        ? "text-[#7a2c17]"
+                        : tarefa.concluida
+                          ? "line-through text-marinho-suave"
+                          : "text-marinho"
+                    }`}
+                  >
                     {tarefa.texto}
                   </p>
                 </div>
